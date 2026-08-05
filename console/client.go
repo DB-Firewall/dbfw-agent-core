@@ -135,6 +135,10 @@ func (c *Client) Sink() engine.EventSink {
 			"seq":        meta.Seq,
 			"txn_status": meta.TxnStatus,
 		}
+		// CDFC: result-set fingerprint tokens (only when present).
+		if len(meta.Tokens) > 0 {
+			ev["tokens"] = meta.Tokens
+		}
 		// Carry the agent-side execution timestamp so the console does not
 		// overwrite it with its (jittered) receive time — load-bearing for
 		// sub-second causal-window correlation.
