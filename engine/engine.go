@@ -74,6 +74,7 @@ type QueryMeta struct {
 	EventTime time.Time // wall-clock instant the query was observed at the proxy
 	Seq       uint64    // per-connection monotonic sequence (orders equal-ms queries)
 	TxnStatus string    // postgres ReadyForQuery status at send time (I/T/E); "" if N/A
+	Tokens    []string  // CDFC: keyed-hash fingerprint of the query's result set ("class:hex")
 }
 
 // EventSink is called after every decision (ALLOW, ALERT, BLOCK).
@@ -97,6 +98,19 @@ func (e *Engine) SetSink(s EventSink) {
 	e.mu.Lock()
 	e.sink = s
 	e.mu.Unlock()
+}
+
+// Emit sends an event to the sink directly, without re-evaluating rules. It is
+// used to emit a query event AFTER its result set has been fingerprinted (CDFC):
+// the block decision was already made and enforced at query time via Decide, and
+// this call carries the deferred event together with meta.Tokens.
+func (e *Engine) Emit(action Action, ruleName, sql string, meta QueryMeta) {
+	e.mu.RLock()
+	sink := e.sink
+	e.mu.RUnlock()
+	if sink != nil && action != ActionIgnore {
+		sink(action, ruleName, sql, meta)
+	}
 }
 
 // Reload atomically replaces the rule set (e.g. after pulling from the console).
