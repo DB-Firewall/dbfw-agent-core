@@ -16,7 +16,7 @@ its full business context and enables detection, correlation and enforcement.
 |------|--------------------|
 | [`dbfw-console`](https://github.com/DB-Firewall/dbfw-console) | Central brain + UI: stores events & rules, HTTP-to-SQL correlation (HPTR), dashboards |
 | **`dbfw-agent-core`** (this repo) | **Shared library**: wire-protocol parsers, rule engine, console client |
-| [`dbfw-proxy-agent`](https://github.com/DB-Firewall/dbfw-proxy-agent) | **Inline** proxy — imports this library |
+| [`dbfw-inline-agent`](https://github.com/DB-Firewall/dbfw-inline-agent) | **Inline** proxy — imports this library |
 | [`dbfw-tap-agent`](https://github.com/DB-Firewall/dbfw-tap-agent) | **Passive** tap — imports this library |
 | [`dbfw-nginx-agent`](https://github.com/DB-Firewall/dbfw-nginx-agent) | HTTP collector (self-contained) |
 | [`dbfw-host-agent`](https://github.com/DB-Firewall/dbfw-host-agent) | Host-OS monitor (self-contained) |
@@ -24,7 +24,7 @@ its full business context and enables detection, correlation and enforcement.
 ```mermaid
 flowchart TB
   core["dbfw-agent-core<br/>engine · protocol · console · backend · tlsutil"]:::here
-  pa[dbfw-proxy-agent inline] -->|imports| core
+  pa[dbfw-inline-agent inline] -->|imports| core
   ta[dbfw-tap-agent passive] -->|imports| core
   classDef here fill:#0ea5e9,stroke:#075985,color:#fff;
 ```
