@@ -14,7 +14,6 @@
 package content
 
 import (
-	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
 	"regexp"
@@ -42,14 +41,19 @@ var patterns = []classPattern{
 // fingerprinted so secrets are not hashed into the store.
 var credBlock = regexp.MustCompile(`(?i)(bearer |authorization|password|secret|apikey|api_key|set-cookie)`)
 
-// Hasher fingerprints text using an HMAC key derived from the console secret.
+// Hasher fingerprints text with a keyed SHA-256 whose key is derived from the
+// console secret. Keyed SHA-256 (secret-prefixed) — rather than HMAC — is used so
+// the gateway can reproduce identical tokens with only a bundled SHA-256 (no HMAC
+// library). It is a deterministic keyed pseudonym: the secret prefix defeats
+// offline dictionary reversal of low-entropy classes; message authentication /
+// length-extension are not part of the threat model here.
 type Hasher struct {
-	key []byte
+	key []byte // raw 32-byte SHA-256 of "dbfw-cdfc|<secret>"
 }
 
-// NewHasher derives the HMAC key from the shared secret. Both the DB agent and
-// the gateway call this with the same secret, yielding matching hashes without
-// ever transmitting the key.
+// NewHasher derives the key from the shared secret. Both the DB agent and the
+// gateway call this with the same secret, yielding matching tokens without ever
+// transmitting the key.
 func NewHasher(secret string) *Hasher {
 	sum := sha256.Sum256([]byte("dbfw-cdfc|" + secret))
 	return &Hasher{key: sum[:]}
@@ -103,9 +107,15 @@ func (h *Hasher) FingerprintValues(values []string, maxN int) []string {
 	return h.Fingerprint(strings.Join(values, "\n"), maxN)
 }
 
+// token = SHA-256( key32 || "|" || class || ":" || canon ), first 96 bits as hex,
+// prefixed with the class. The gateway Lua computes the identical value.
 func (h *Hasher) token(class, canon string) string {
-	mac := hmac.New(sha256.New, h.key)
-	mac.Write([]byte(class + ":" + canon))
-	sum := mac.Sum(nil)
+	buf := make([]byte, 0, len(h.key)+len(class)+len(canon)+2)
+	buf = append(buf, h.key...)
+	buf = append(buf, '|')
+	buf = append(buf, class...)
+	buf = append(buf, ':')
+	buf = append(buf, canon...)
+	sum := sha256.Sum256(buf)
 	return class + ":" + hex.EncodeToString(sum[:12]) // 96-bit
 }
