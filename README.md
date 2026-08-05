@@ -50,3 +50,12 @@ correlation field means the same thing regardless of capture mode.
 ```go
 import "github.com/DB-Firewall/dbfw-agent-core/engine"
 ```
+
+## content package (CDFC)
+
+`content` extracts high-entropy opaque-leaf tokens (uuid, email, jwt, hex digest,
+long opaque) from text and fingerprints them with a keyed SHA-256 whose key is
+derived from the console secret. It is shared by the DB agents (result-set
+tokens) and mirrored byte-for-byte by the gateway Lua (response/request tokens),
+so both sides produce identical tokens for the same value. Raw values never leave
+the capture point.
