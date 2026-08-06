@@ -1,5 +1,7 @@
 package postgres
 
+import "encoding/binary"
+
 // PostgreSQL frontend message types (client → server)
 const (
 	MsgQuery    byte = 'Q' // Simple Query
@@ -132,4 +134,38 @@ func ReadyForQueryStatus(pkt *Packet) (byte, bool) {
 		return 0, false
 	}
 	return pkt.Payload[len(pkt.Payload)-1], true
+}
+
+// ParseDataRow returns the non-NULL, text-format column values of a backend
+// DataRow ('D') packet. Layout: int16 field count, then per field int32 length
+// (-1 = NULL) followed by that many bytes. Binary-format values are returned as
+// their raw bytes (they rarely tokenize; the CDFC grammar simply ignores them).
+// Used only on the server→client direction, so 'D' is DataRow (not Describe).
+func ParseDataRow(pkt *Packet) ([]string, bool) {
+	if pkt.Type != MsgDataRow {
+		return nil, false
+	}
+	p := pkt.Payload
+	if len(p) < 2 {
+		return nil, false
+	}
+	n := int(binary.BigEndian.Uint16(p[0:2]))
+	pos := 2
+	vals := make([]string, 0, n)
+	for i := 0; i < n; i++ {
+		if pos+4 > len(p) {
+			break
+		}
+		l := int32(binary.BigEndian.Uint32(p[pos : pos+4]))
+		pos += 4
+		if l < 0 { // SQL NULL
+			continue
+		}
+		if pos+int(l) > len(p) {
+			break
+		}
+		vals = append(vals, string(p[pos:pos+int(l)]))
+		pos += int(l)
+	}
+	return vals, true
 }
