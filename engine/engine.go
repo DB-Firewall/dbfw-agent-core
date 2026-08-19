@@ -75,6 +75,7 @@ type QueryMeta struct {
 	Seq       uint64    // per-connection monotonic sequence (orders equal-ms queries)
 	TxnStatus string    // postgres ReadyForQuery status at send time (I/T/E); "" if N/A
 	Tokens    []string  // CDFC: keyed-hash fingerprint of the query's result set ("class:hex")
+	Result    string    // CDFC forensics: bounded readable render of the result rows
 }
 
 // EventSink is called after every decision (ALLOW, ALERT, BLOCK).

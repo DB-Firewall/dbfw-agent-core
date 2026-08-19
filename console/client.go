@@ -139,6 +139,10 @@ func (c *Client) Sink() engine.EventSink {
 		if len(meta.Tokens) > 0 {
 			ev["tokens"] = meta.Tokens
 		}
+		// CDFC forensics: bounded readable render of the result rows.
+		if meta.Result != "" {
+			ev["result"] = meta.Result
+		}
 		// Carry the agent-side execution timestamp so the console does not
 		// overwrite it with its (jittered) receive time — load-bearing for
 		// sub-second causal-window correlation.
